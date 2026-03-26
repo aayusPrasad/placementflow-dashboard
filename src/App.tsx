@@ -28,6 +28,12 @@ import RecruiterAnalytics from "@/pages/recruiter/RecruiterAnalytics";
 import RecruiterProfile from "@/pages/recruiter/RecruiterProfile";
 import RecruiterSettings from "@/pages/recruiter/RecruiterSettings";
 
+// Auth pages
+import StudentLogin from "@/pages/auth/StudentLogin";
+import StudentSignup from "@/pages/auth/StudentSignup";
+import RecruiterLogin from "@/pages/auth/RecruiterLogin";
+import RecruiterSignup from "@/pages/auth/RecruiterSignup";
+import Index from "@/pages/Index";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,7 +85,13 @@ const App = () => (
       <Sonner />
       <RoleProvider>
         <BrowserRouter>
-          <RoleRouter />
+          <Routes>
+            <Route path="/student-login" element={<StudentLogin />} />
+            <Route path="/student-signup" element={<StudentSignup />} />
+            <Route path="/recruiter-login" element={<RecruiterLogin />} />
+            <Route path="/recruiter-signup" element={<RecruiterSignup />} />
+            <Route path="/*" element={<RoleRouter />} />
+          </Routes>
         </BrowserRouter>
       </RoleProvider>
     </TooltipProvider>
