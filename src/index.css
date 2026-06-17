@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 30% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --muted: 220 14% 94%;
+    --muted-foreground: 215 16% 47%;
+    --border: 220 13% 88%;
+    --primary: 248 90% 60%;
+    --primary-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    --background: 222 47% 5%;
+    --foreground: 213 31% 91%;
+    --card: 222 47% 8%;
+    --card-foreground: 213 31% 91%;
+    --muted: 223 32% 14%;
+    --muted-foreground: 215 20% 70%;
+    --border: 216 34% 17%;
+    --primary: 263 90% 66%;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  * {
+    @apply border-border;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply border bg-card/70 shadow-xl backdrop-blur-xl;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-400 bg-clip-text text-transparent;
+  }
+
+  .page {
+    @apply space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-500;
+  }
+
+  .grid-cards {
+    @apply grid gap-4 md:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .input {
+    @apply w-full rounded-xl border bg-background/70 px-3 py-2 outline-none ring-primary/30 transition focus:ring-4;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 font-medium text-primary-foreground shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 rounded-xl border bg-card/50 px-4 py-2 hover:bg-muted;
+  }
+
+  .badge {
+    @apply rounded-full border px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .card {
+    @apply glass rounded-2xl p-5;
+  }
+
+  .orb {
+    @apply pointer-events-none fixed rounded-full blur-3xl opacity-30;
+  }
+}
