@@ -1,3 +1,9 @@
+import axios, {
+  AxiosError,
+  type AxiosProgressEvent,
+  type AxiosRequestConfig,
+} from 'axios';
+
 import type {
   Applicant,
   Application,
@@ -9,387 +15,279 @@ import type {
   StudentDashboard,
 } from '@/types';
 
-export const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
-});
+/* ========================= API BASE URL ========================= */
 
-function getToken(role: 'student' | 'recruiter') {
-  return localStorage.getItem(role === 'student' ? 'studentToken' : 'recruiterToken');
-}
+const DEFAULT_API_BASE_URL = import.meta.env.DEV
+  ? 'http://localhost:5000/api'
+  : '/api';
 
-function auth(role: 'student' | 'recruiter') {
-  return {
-    Authorization: `Bearer ${getToken(role)}`,
-  };
-}
-
-async function call<T>(config: AxiosRequestConfig) {
-  try {
-    const response = await api.request<T>(config);
-    return response.data;
-  } catch (error) {
-    const axiosError = error as AxiosError<{ message?: string }>;
-    throw new Error(axiosError.response?.data?.message || axiosError.message || 'API request failed');
-  }
-}
-
-export const authApi = {
-  studentLogin: (body: { email: string; password: string }) =>
-    call<{ token: string; student: Student }>({
-      url: '/auth/login/student',
-      method: 'POST',
-      data: body,
-    }),
-
-  studentSignup: (body: { name: string; email: string; password: string }) =>
-    call<{ message: string }>({
-      url: '/auth/signup/student',
-      method: 'POST',
-      data: body,
-    }),
-
-  recruiterLogin: (body: { email: string; password: string }) =>
-    call<{ token: string; recruiter: Recruiter }>({
-      url: '/auth/login/recruiter',
-      method: 'POST',
-      data: body,
-    }),
-
-  recruiterSignup: (body: Partial<Recruiter> & { password: string }) =>
-    call<{ message: string }>({
-      url: '/auth/signup/recruiter',
-      method: 'POST',
-      data: body,
-    }),
-};
-
-export const studentApi = {
-  profile: () =>
-    call<{ student: Student }>({
-      url: '/student/profile',
-      headers: auth('student'),
-    }),
-
-  dashboard: () =>
-    call<StudentDashboard>({
-      url: '/student/dashboard',
-      headers: auth('student'),
-    }),
-
-  applications: () =>
-    call<Application[]>({
-      url: '/student/applications',
-      headers: auth('student'),
-    }),
-
-  apply: (jobId: string) =>
-    call<{ message: string }>({
-      url: '/applicants/apply',
-      method: 'POST',
-      headers: auth('student'),
-      data: { jobId },
-    }),
-
-  settings: () =>
-    call<Student>({
-      url: '/settings',
-      headers: auth('student'),
-    }),
-
-  updateSettings: (data: Partial<Student>) =>
-    call<{ message: string; student: Student }>({
-      url: '/settings',
-      method: 'PUT',
-      headers: auth('student'),
-      data,
-    }),
-
-  uploadResume: (file: File, onUploadProgress?: (event: AxiosProgressEvent) => void) => {
-    const formData = new FormData();
-    formData.append('resume', file);
-
-    return call<{ message: string; data: ResumeAnalysis }>({
-      url: '/resume/upload',
-      method: 'POST',
-      headers: auth('student'),
-      data: formData,
-      onUploadProgress,
-    });
-  },
-};
-
-export const recruiterApi = {
-  dashboard: () =>
-    call<RecruiterDashboard>({
-      url: '/recruiter/dashboard',
-      headers: auth('recruiter'),
-    }),
-
-  profile: () =>
-    call<Recruiter>({
-      url: '/recruiter/profile',
-      headers: auth('recruiter'),
-    }),
-
-  updateProfile: (data: Partial<Recruiter>) =>
-    call<{ message: string; recruiter: Recruiter }>({
-      url: '/recruiter/profile',
-      method: 'PUT',
-      headers: auth('recruiter'),
-      data: {
-        ...data,
-        name: data.recruiterName,
-        company: data.companyName,
-      },
-    }),
-
-  jobs: () =>
-    call<Job[]>({
-      url: '/recruiter/jobs',
-      headers: auth('recruiter'),
-    }),
-
-  createJob: (data: Partial<Job>) =>
-    call<{ message: string; job: Job }>({
-      url: '/jobs',
-      method: 'POST',
-      headers: auth('recruiter'),
-      data: {
-        ...data,
-        skills: Array.isArray(data.skills) ? data.skills.join(',') : data.skills,
-      },
-    }),
-
-  deleteJob: (jobId: string) =>
-    call<{ message: string }>({
-      url: `/recruiter/job/${jobId}`,
-      method: 'DELETE',
-      headers: auth('recruiter'),
-    }),
-
-  applicants: () =>
-    call<{ applicants: Applicant[] }>({
-      url: '/applicants',
-      headers: auth('recruiter'),
-    }),
-
-  jobApplicants: (jobId: string) =>
-    call<Applicant[]>({
-      url: `/applicants/job/${jobId}`,
-      headers: auth('recruiter'),
-    }),
-
-  shortlisted: () =>
-    call<{ applicants?: Applicant[] } | Applicant[]>({
-      url: '/applicants/shortlisted',
-      headers: auth('recruiter'),
-    }),
-};
-
-export const jobsApi = {
-  all: () => call<Job[]>({ url: '/jobs' }),
-};
-import axios, { AxiosError, type AxiosProgressEvent, type AxiosRequestConfig } from 'axios';
-import type {
-  Applicant,
-  Application,
-  Job,
-  Recruiter,
-  RecruiterDashboard,
-  ResumeAnalysis,
-  Student,
-  StudentDashboard,
-} from '@/types';
-
-const DEFAULT_API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000/api' : '/api';
 const configuredApiBaseUrl = import.meta.env.VITE_API_URL?.trim();
-const apiBaseUrl = (configuredApiBaseUrl || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+
+const apiBaseUrl = (
+  configuredApiBaseUrl || DEFAULT_API_BASE_URL
+).replace(/\/+$/, '');
+
+/* ========================= AXIOS INSTANCE ========================= */
 
 export const api = axios.create({
   baseURL: apiBaseUrl,
 });
 
-function getToken(role: 'student' | 'recruiter') {
-  return localStorage.getItem(role === 'student' ? 'studentToken' : 'recruiterToken');
-}
+/* ========================= TOKEN HELPERS ========================= */
 
-function auth(role: 'student' | 'recruiter') {
+const getToken = (role: 'student' | 'recruiter') => {
+  if (role === 'student') {
+    return localStorage.getItem('studentToken');
+  }
+  return localStorage.getItem('recruiterToken');
+};
+
+/* ========================= AUTH CONFIG ========================= */
+
+const auth = (
+  role: 'student' | 'recruiter'
+): AxiosRequestConfig => {
+  const token = getToken(role);
+
+  if (!token) {
+    return {};
+  }
+
   return {
-    Authorization: `Bearer ${getToken(role)}`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   };
-}
+};
 
-async function call<T>(config: AxiosRequestConfig) {
+/* ========================= GENERIC API CALL ========================= */
+
+const call = async <T>(
+  config: AxiosRequestConfig
+): Promise<T> => {
   try {
     const response = await api.request<T>(config);
     return response.data;
   } catch (error) {
-    const axiosError = error as AxiosError<{ message?: string }>;
-    const serverMessage = axiosError.response?.data?.message;
+    const axiosError = error as AxiosError<{
+      message?: string;
+      error?: string;
+    }>;
 
-    if (!axiosError.response && axiosError.request) {
-      throw new Error(
-        `Unable to reach the API server at ${apiBaseUrl}. Check that VITE_API_URL points to the deployed backend.`,
-      );
-    }
+    const message =
+      axiosError.response?.data?.message ||
+      axiosError.response?.data?.error ||
+      axiosError.message ||
+      'Something went wrong';
 
-    throw new Error(serverMessage || axiosError.message || 'API request failed');
+    throw new Error(message);
   }
-}
+};
+
+/* ========================= AUTH API ========================= */
 
 export const authApi = {
-  studentLogin: (body: { email: string; password: string }) =>
-    call<{ token: string; student: Student }>({
+  studentLogin: (data: { email: string; password: string }) =>
+    call<{
+      token: string;
+      student?: Student;
+      user?: Student;
+      message?: string;
+    }>({
+      method: 'POST',
       url: '/auth/login/student',
-      method: 'POST',
-      data: body,
+      data,
     }),
 
-  studentSignup: (body: { name: string; email: string; password: string }) =>
-    call<{ message: string }>({
+  studentSignup: (data: Record<string, unknown>) =>
+    call<{
+      token?: string;
+      student?: Student;
+      user?: Student;
+      message?: string;
+    }>({
+      method: 'POST',
       url: '/auth/signup/student',
-      method: 'POST',
-      data: body,
+      data,
     }),
 
-  recruiterLogin: (body: { email: string; password: string }) =>
-    call<{ token: string; recruiter: Recruiter }>({
+  recruiterLogin: (data: { email: string; password: string }) =>
+    call<{
+      token: string;
+      recruiter?: Recruiter;
+      user?: Recruiter;
+      message?: string;
+    }>({
+      method: 'POST',
       url: '/auth/login/recruiter',
-      method: 'POST',
-      data: body,
+      data,
     }),
 
-  recruiterSignup: (body: Partial<Recruiter> & { password: string }) =>
-    call<{ message: string }>({
-      url: '/auth/signup/recruiter',
+  recruiterSignup: (data: Record<string, unknown>) =>
+    call<{
+      token?: string;
+      recruiter?: Recruiter;
+      user?: Recruiter;
+      message?: string;
+    }>({
       method: 'POST',
-      data: body,
+      url: '/auth/signup/recruiter',
+      data,
     }),
 };
 
+/* ========================= STUDENT API ========================= */
+
 export const studentApi = {
   profile: () =>
-    call<{ student: Student }>({
+    call<Student>({
+      method: 'GET',
       url: '/student/profile',
-      headers: auth('student'),
+      ...auth('student'),
     }),
 
   dashboard: () =>
     call<StudentDashboard>({
+      method: 'GET',
       url: '/student/dashboard',
-      headers: auth('student'),
+      ...auth('student'),
     }),
 
   applications: () =>
     call<Application[]>({
+      method: 'GET',
       url: '/student/applications',
-      headers: auth('student'),
+      ...auth('student'),
     }),
 
   apply: (jobId: string) =>
-    call<{ message: string }>({
-      url: '/applicants/apply',
+    call<Application>({
       method: 'POST',
-      headers: auth('student'),
+      url: '/applicants/apply',
       data: { jobId },
+      ...auth('student'),
     }),
 
-  settings: () =>
+  settings: (data: Record<string, unknown>) =>
     call<Student>({
-      url: '/settings',
-      headers: auth('student'),
-    }),
-
-  updateSettings: (data: Partial<Student>) =>
-    call<{ message: string; student: Student }>({
-      url: '/settings',
       method: 'PUT',
-      headers: auth('student'),
+      url: '/settings',
       data,
+      ...auth('student'),
     }),
 
-  uploadResume: (file: File, onUploadProgress?: (event: AxiosProgressEvent) => void) => {
+  /* ========================= RESUME UPLOAD ========================= */
+
+  uploadResume: (
+    file: File,
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
+  ) => {
     const formData = new FormData();
     formData.append('resume', file);
 
-    return call<{ message: string; data: ResumeAnalysis }>({
-      url: '/resume/upload',
+    const token = getToken('student');
+
+    return call<ResumeAnalysis>({
       method: 'POST',
-      headers: auth('student'),
+      url: '/resume/upload',
       data: formData,
+      headers: token
+        ? { Authorization: `Bearer ${token}` }
+        : {},
       onUploadProgress,
     });
   },
 };
 
+/* ========================= RECRUITER API ========================= */
+
 export const recruiterApi = {
   dashboard: () =>
     call<RecruiterDashboard>({
+      method: 'GET',
       url: '/recruiter/dashboard',
-      headers: auth('recruiter'),
+      ...auth('recruiter'),
     }),
 
   profile: () =>
     call<Recruiter>({
+      method: 'GET',
       url: '/recruiter/profile',
-      headers: auth('recruiter'),
+      ...auth('recruiter'),
     }),
 
-  updateProfile: (data: Partial<Recruiter>) =>
-    call<{ message: string; recruiter: Recruiter }>({
-      url: '/recruiter/profile',
+  updateProfile: (data: Record<string, unknown>) =>
+    call<Recruiter>({
       method: 'PUT',
-      headers: auth('recruiter'),
-      data: {
-        ...data,
-        name: data.recruiterName,
-        company: data.companyName,
-      },
+      url: '/recruiter/profile',
+      data,
+      ...auth('recruiter'),
     }),
 
   jobs: () =>
     call<Job[]>({
+      method: 'GET',
       url: '/recruiter/jobs',
-      headers: auth('recruiter'),
+      ...auth('recruiter'),
     }),
 
-  createJob: (data: Partial<Job>) =>
-    call<{ message: string; job: Job }>({
-      url: '/jobs',
+  createJob: (data: Record<string, unknown>) =>
+    call<Job>({
       method: 'POST',
-      headers: auth('recruiter'),
-      data: {
-        ...data,
-        skills: Array.isArray(data.skills) ? data.skills.join(',') : data.skills,
-      },
+      url: '/jobs',
+      data,
+      ...auth('recruiter'),
+    }),
+
+  updateJob: (jobId: string, data: Record<string, unknown>) =>
+    call<Job>({
+      method: 'PUT',
+      url: `/recruiter/job/${jobId}`,
+      data,
+      ...auth('recruiter'),
     }),
 
   deleteJob: (jobId: string) =>
     call<{ message: string }>({
-      url: `/recruiter/job/${jobId}`,
       method: 'DELETE',
-      headers: auth('recruiter'),
+      url: `/recruiter/job/${jobId}`,
+      ...auth('recruiter'),
     }),
 
   applicants: () =>
-    call<{ applicants: Applicant[] }>({
+    call<Applicant[]>({
+      method: 'GET',
       url: '/applicants',
-      headers: auth('recruiter'),
+      ...auth('recruiter'),
     }),
 
-  jobApplicants: (jobId: string) =>
+  applicantsByJob: (jobId: string) =>
     call<Applicant[]>({
+      method: 'GET',
       url: `/applicants/job/${jobId}`,
-      headers: auth('recruiter'),
+      ...auth('recruiter'),
     }),
 
   shortlisted: () =>
-    call<{ applicants?: Applicant[] } | Applicant[]>({
+    call<Applicant[]>({
+      method: 'GET',
       url: '/applicants/shortlisted',
-      headers: auth('recruiter'),
+      ...auth('recruiter'),
     }),
 };
 
+/* ========================= JOBS API ========================= */
+
 export const jobsApi = {
-  all: () => call<Job[]>({ url: '/jobs' }),
+  all: () =>
+    call<Job[]>({
+      method: 'GET',
+      url: '/jobs',
+    }),
+
+  getById: (jobId: string) =>
+    call<Job>({
+      method: 'GET',
+      url: `/jobs/${jobId}`,
+    }),
 };
