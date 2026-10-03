@@ -1,3 +1,6 @@
+const dns = require("dns");
+
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
@@ -53,6 +56,7 @@ app.get("/protected", authMiddleware, (req, res) => {
     user: req.user,
   });
 });
+
 
 // MongoDB Connection
 mongoose
